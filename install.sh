@@ -1,34 +1,51 @@
 #!/bin/bash
 
-# Get absolute path to game directory
-GAME_DIR=$(cd "$(dirname "$0")" && pwd)
-
 # Install dependencies
 sudo apt update
-sudo apt install -y python3 python3-pip python3-pygame git
+sudo apt install -y python3 python3-pip python3-venv python3-pygame git
 
-# Create assets and sounds directories
-mkdir -p "$GAME_DIR/assets"
-mkdir -p "$GAME_DIR/sounds"
+# Create virtual environment
+python3 -m venv cheza_venv
+source cheza_venv/bin/activate
+pip install -r requirements.txt
 
-# Create launcher script
-echo '#!/bin/bash
+# Create assets directory
+mkdir -p assets sounds
+
+# Generate silent sound files if they don't exist
+for sound in move rotate clear gameover; do
+    if [ ! -f "sounds/${sound}.wav" ]; then
+        ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.1 -q:a 9 -acodec libmp3lame "sounds/${sound}.wav"
+    fi
+done
+
+# Create default icon if missing
+if [ ! -f "assets/cheza_icon.png" ]; then
+    convert -size 64x64 xc:black -fill red -draw "rectangle 0,0 31,31" -fill blue -draw "rectangle 32,0 63,31" -fill yellow -draw "rectangle 0,32 31,63" -fill green -draw "rectangle 32,32 63,63" assets/cheza_icon.png
+fi
+
+# Create launcher
+cat > launch_cheza.sh << 'EOL'
+#!/bin/bash
 cd "$(dirname "$0")"
-python3 cheza.py' > "$GAME_DIR/launch_cheza.sh"
-chmod +x "$GAME_DIR/launch_cheza.sh"
+source cheza_venv/bin/activate
+python3 cheza.py
+EOL
+chmod +x launch_cheza.sh
 
 # Create desktop shortcut
-echo "[Desktop Entry]
+cat > ~/Desktop/Cheza.desktop << EOL
+[Desktop Entry]
 Name=Cheza
-Comment=Ultimate Tetris Experience
-Exec=\"$GAME_DIR/launch_cheza.sh\"
-Icon=$GAME_DIR/assets/cheza_icon.png
+Comment=Tetris Game for Kids
+Exec=$(pwd)/launch_cheza.sh
+Icon=$(pwd)/assets/cheza_icon.png
 Terminal=false
 Type=Application
 Categories=Game;
-Path=$GAME_DIR
-StartupNotify=true" > ~/Desktop/Cheza.desktop
-
+Path=$(pwd)
+StartupNotify=true
+EOL
 chmod +x ~/Desktop/Cheza.desktop
 
-echo "Installation complete! Double-click the Cheza icon on your desktop to play."
+echo "Installation complete! A shortcut has been created on your desktop."
