@@ -8,15 +8,55 @@ import os
 pygame.init()
 pygame.mixer.init()
 
-# Game constants
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+# Add this function near the top of your code
+def create_default_icon():
+    icon_surface = pygame.Surface((64, 64))
+    icon_surface.fill((0, 0, 0))  # Black background
+    
+    # Draw simple Tetris blocks
+    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+    for i, color in enumerate(colors):
+        pygame.draw.rect(icon_surface, color, (i*16, i*16, 16, 16))
+    
+    return icon_surface
+
+# The icon loading code:
+try:
+    icon = pygame.image.load('assets/cheza_icon.png')
+    pygame.display.set_icon(icon)
+except:
+    print("Using generated icon")
+    icon = create_default_icon()
+    pygame.display.set_icon(icon)
+
+# Constants 
+SCREEN_WIDTH = 400  # Reduced from 800 to fit the grid better
+SCREEN_HEIGHT = 600  # This should show the full grid now
 GRID_SIZE = 30
 GRID_WIDTH = 10
 GRID_HEIGHT = 20
-SIDEBAR_WIDTH = 200
+SIDEBAR_WIDTH = 100  # Reduced sidebar width
 
-# Colors
+# screen initialization to allow resizing
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
+pygame.display.set_caption("Cheza - Tetris for Kids")
+
+# function to handle window resizing
+def handle_resize(event):
+    global SCREEN_WIDTH, SCREEN_HEIGHT, screen
+    SCREEN_WIDTH = event.w
+    SCREEN_HEIGHT = event.h
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
+
+# event handler
+for event in pygame.event.get():
+    if event.type == pygame.QUIT:
+        run = False
+        pygame.quit()
+        sys.exit()
+    elif event.type == pygame.VIDEORESIZE:
+        handle_resize(event)
+    
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GRAY = (128, 128, 128)
@@ -113,20 +153,25 @@ def draw_grid(surface, grid):
 def draw_window(surface, grid, score, level, next_piece):
     surface.fill(BLACK)
     
+    # Calculate dynamic positions based on window size
+    grid_x = (SCREEN_WIDTH - GRID_WIDTH * GRID_SIZE) // 2
+    if grid_x < 10:  # Minimum margin
+        grid_x = 10
+    
     # Draw title
     title = font_large.render("CHEZA", 1, WHITE)
     surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 5))
     
-    # Draw score and level
+    # Draw score and level with dynamic positioning
     score_text = font_medium.render(f"Score: {score}", 1, WHITE)
     level_text = font_medium.render(f"Level: {level}", 1, WHITE)
     
-    surface.blit(score_text, (50, 100))
-    surface.blit(level_text, (50, 150))
+    surface.blit(score_text, (10, 50))
+    surface.blit(level_text, (10, 90))
     
     # Draw next piece preview
     next_text = font_medium.render("Next:", 1, WHITE)
-    surface.blit(next_text, (SCREEN_WIDTH - 150, 100))
+    surface.blit(next_text, (SCREEN_WIDTH - 110, 50))
     
     # Draw next piece
     if next_piece:
@@ -134,12 +179,38 @@ def draw_window(surface, grid, score, level, next_piece):
             for x, cell in enumerate(row):
                 if cell:
                     pygame.draw.rect(surface, next_piece.color, 
-                                    (SCREEN_WIDTH - 150 + x * GRID_SIZE, 
-                                     150 + y * GRID_SIZE, 
+                                    (SCREEN_WIDTH - 110 + x * GRID_SIZE, 
+                                     90 + y * GRID_SIZE, 
                                      GRID_SIZE, GRID_SIZE), 0)
     
-    # Draw grid
-    draw_grid(surface, grid)
+    # Draw grid with dynamic positioning
+    draw_grid(surface, grid, grid_x)
+    
+    # Draw border around play area
+    border_rect = pygame.Rect(grid_x - 2, 
+                             50 - 2, 
+                             GRID_WIDTH * GRID_SIZE + 4, 
+                             GRID_HEIGHT * GRID_SIZE + 4)
+    pygame.draw.rect(surface, WHITE, border_rect, 2)
+
+def draw_grid(surface, grid, grid_x):
+    for y in range(len(grid)):
+        for x in range(len(grid[y])):
+            pygame.draw.rect(surface, grid[y][x], 
+                           (grid_x + x * GRID_SIZE, 
+                            y * GRID_SIZE + 50, 
+                            GRID_SIZE, GRID_SIZE), 0)
+    
+    # Draw grid lines
+    for y in range(GRID_HEIGHT + 1):
+        pygame.draw.line(surface, GRAY, 
+                        (grid_x, y * GRID_SIZE + 50),
+                        (grid_x + GRID_WIDTH * GRID_SIZE, y * GRID_SIZE + 50))
+    
+    for x in range(GRID_WIDTH + 1):
+        pygame.draw.line(surface, GRAY, 
+                        (grid_x + x * GRID_SIZE, 50),
+                        (grid_x + x * GRID_SIZE, GRID_HEIGHT * GRID_SIZE + 50)) 
     
     # Draw border around play area
     border_rect = pygame.Rect((SCREEN_WIDTH - GRID_WIDTH * GRID_SIZE) // 2 - 2, 
