@@ -2,15 +2,14 @@
 
 # Install dependencies
 sudo apt update
-sudo apt install -y python3 python3-pip python3-pygame
+sudo apt install -y python3 python3-pip python3-pygame git
 
-# Create assets directory if it doesn't exist
+# Create assets directory
 mkdir -p assets
+mkdir -p sounds
 
-# Download a default icon if none exists
-if [ ! -f assets/cheza_icon.png ]; then
-    wget -O assets/cheza_icon.png https://raw.githubusercontent.com/yourusername/Cheza/main/assets/cheza_icon.png || echo "Could not download icon, using default"
-fi
+# Download default icon (replace URL with your actual icon)
+wget -O assets/cheza_icon.png https://raw.githubusercontent.com/yourusername/Cheza/main/assets/cheza_icon.png || echo "Using default icon"
 
 # Create desktop shortcut
 echo "[Desktop Entry]
