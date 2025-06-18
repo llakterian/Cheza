@@ -9,13 +9,16 @@ GAME_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(GAME_DIR)
 
 # Game constants
-GRID_SIZE = 30
 GRID_WIDTH = 10
 GRID_HEIGHT = 20
+MIN_GRID_SIZE = 20  # Minimum size of each block in pixels
+MAX_GRID_SIZE = 50  # Maximum size of each block in pixels
+DEFAULT_GRID_SIZE = 30
 MIN_WINDOW_WIDTH = 400
 MIN_WINDOW_HEIGHT = 600
-INITIAL_WINDOW_WIDTH = 500
-INITIAL_WINDOW_HEIGHT = 700
+INITIAL_WINDOW_WIDTH = 800  # Larger initial window size
+INITIAL_WINDOW_HEIGHT = 900
+
 
 # Colors
 BLACK = (0, 0, 0)
@@ -66,6 +69,7 @@ class Tetrimino:
 class Game:
     def __init__(self):
         self.high_score = self.load_high_score()
+        self.grid_size = DEFAULT_GRID_SIZE
         self.setup_window()
         self.load_assets()
         self.reset_game()
@@ -76,8 +80,7 @@ class Game:
             (INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT), 
             pygame.RESIZABLE
         )
-        pygame.display.set_caption("Cheza - Tetris for Kids")
-        
+        pygame.display.set_caption("Cheza - Tetris for Kids")        
         # Set icon
         icon_path = os.path.join(GAME_DIR, 'assets/cheza_icon.png')
         if os.path.exists(icon_path):
@@ -134,8 +137,13 @@ class Game:
         self.fall_time = 0
         self.fall_speed = 500  # milliseconds
         self.game_over = False
+        self.paused = False  # Initialize paused state
         self.current_piece = self.get_new_piece()
         self.next_piece = self.get_new_piece()
+
+    def toggle_pause(self):
+        """Toggle pause state"""
+        self.paused = not self.paused
 
     def get_new_piece(self):
         """Generate a new random tetrimino"""
@@ -194,28 +202,30 @@ class Game:
         """Handle keyboard input"""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                if self.is_valid_position(self.current_piece, dx=-1):
+                if self.is_valid_position(self.current_piece, dx=-1) and not self.paused:
                     self.current_piece.x -= 1
                     self.sounds['move'].play()
             elif event.key == pygame.K_RIGHT:
-                if self.is_valid_position(self.current_piece, dx=1):
+                if self.is_valid_position(self.current_piece, dx=1) and not self.paused:
                     self.current_piece.x += 1
                     self.sounds['move'].play()
             elif event.key == pygame.K_DOWN:
-                if self.is_valid_position(self.current_piece, dy=1):
+                if self.is_valid_position(self.current_piece, dy=1) and not self.paused:
                     self.current_piece.y += 1
                     self.score += 1
             elif event.key == pygame.K_UP:
                 new_rotation = (self.current_piece.rotation + 1) % len(self.current_piece.shape)
-                if self.is_valid_position(self.current_piece, rotation=new_rotation):
+                if self.is_valid_position(self.current_piece, rotation=new_rotation) and not self.paused:
                     self.current_piece.rotation = new_rotation
                     self.sounds['rotate'].play()
+            elif event.key == pygame.K_p:  # Pause with P key
+                self.toggle_pause()
             elif event.key == pygame.K_r and self.game_over:
                 self.reset_game()
 
     def update(self, dt):
         """Update game state"""
-        if self.game_over:
+        if self.game_over or self.paused:
             return
         
         self.fall_time += dt
@@ -262,7 +272,7 @@ class Game:
                 pygame.draw.rect(self.screen, LIGHT_GRAY, rect, 1)
         
         # Draw current piece
-        if not self.game_over:
+        if not self.game_over and not self.paused:
             shape = self.current_piece.get_current_shape()
             for y, row in enumerate(shape):
                 for x, cell in enumerate(row):
@@ -307,6 +317,13 @@ class Game:
             restart_text = self.fonts['small'].render("Press R to restart", True, WHITE)
             self.screen.blit(game_over_text, (50, 300))
             self.screen.blit(restart_text, (50, 360))
+        
+        # Pause Status
+        if self.paused:
+            pause_text = self.fonts['large'].render("PAUSED", True, WHITE)
+            self.screen.blit(pause_text, (50, 300))
+            continue_text = self.fonts['small'].render("Press P to continue", True, WHITE)
+            self.screen.blit(continue_text, (50, 360))
 
     def run(self):
         """Main game loop"""

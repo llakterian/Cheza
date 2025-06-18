@@ -1,18 +1,25 @@
-# Cheza - Simple Tetris Game
+# Cheza - Dynamic Tetris Game
 
 ![Cheza Screenshot](screenshot.png)
 
-Cheza (which means "play" in Swahili) is a simple, colorful Tetris game designed for easy play.
+## New Resizing Features
+- **Dynamic Board Scaling**: The game board automatically adjusts to your window size
+- **Responsive UI**: All elements reposition intelligently
+- **Size Constraints**: 
+  - Minimum block size: 20px
+  - Maximum block size: 50px
+  - Default size: 30px
 
-## Features
-- Simple, clean interface
-- Classic Tetris gameplay
-- Score tracking
-- Increasing difficulty
-- Next piece preview
+## Controls
+- **Arrow Keys**: Move pieces
+- **P**: Pause/Resume
+- **R**: Restart game
+- **Resize**: Drag window edges to adjust game size
 
 ## Installation
-
-### Quick Start
 ```bash
-python3 cheza.py
+# Install dependencies
+./install.sh
+
+# Run the game
+./launch_cheza.sh
