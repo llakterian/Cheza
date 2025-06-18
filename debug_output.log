@@ -1,0 +1,4 @@
+  File "/home/lappy/Game/cheza.py", line 82
+    try:
+    ^^^
+IndentationError: expected an indented block after function definition on line 81
