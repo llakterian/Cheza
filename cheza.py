@@ -19,7 +19,6 @@ MIN_WINDOW_HEIGHT = 600
 INITIAL_WINDOW_WIDTH = 800  # Larger initial window size
 INITIAL_WINDOW_HEIGHT = 900
 
-
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -80,7 +79,8 @@ class Game:
             (INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT), 
             pygame.RESIZABLE
         )
-        pygame.display.set_caption("Cheza - Tetris for Kids")        
+        pygame.display.set_caption("Cheza - Tetris for Kids")
+        
         # Set icon
         icon_path = os.path.join(GAME_DIR, 'assets/cheza_icon.png')
         if os.path.exists(icon_path):
@@ -88,6 +88,24 @@ class Game:
             pygame.display.set_icon(icon)
         else:
             self.create_default_icon()
+
+    def handle_resize(self, event):
+        """Handle window resize events"""
+        if event.type == pygame.VIDEORESIZE:
+            # Calculate possible grid size based on width and height
+            width_based = (event.w - 200) // GRID_WIDTH  # Leave space for UI
+            height_based = (event.h - 100) // GRID_HEIGHT
+            
+            # Choose the smaller of the two, constrained to min/max
+            new_size = min(width_based, height_based, MAX_GRID_SIZE)
+            new_size = max(new_size, MIN_GRID_SIZE)
+            
+            # Only update if significant change
+            if abs(new_size - self.grid_size) > 2:
+                self.grid_size = new_size
+                self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                return True
+        return False
 
     def load_sound(self, filename):
         """Load sound file with silent fallback"""
@@ -115,11 +133,11 @@ class Game:
             'game_over': self.load_sound('gameover.wav')
         }
         
-        # Fonts
+        # Fonts (with dynamic sizing based on grid size)
         self.fonts = {
-            'small': pygame.font.SysFont('comicsans', 25),
-            'medium': pygame.font.SysFont('comicsans', 35),
-            'large': pygame.font.SysFont('comicsans', 50)
+            'small': pygame.font.SysFont('comicsans', max(15, self.grid_size // 2)),
+            'medium': pygame.font.SysFont('comicsans', max(20, self.grid_size // 1.5)),
+            'large': pygame.font.SysFont('comicsans', max(30, self.grid_size))
         }
 
     def create_default_icon(self):
@@ -137,7 +155,7 @@ class Game:
         self.fall_time = 0
         self.fall_speed = 500  # milliseconds
         self.game_over = False
-        self.paused = False  # Initialize paused state
+        self.paused = False
         self.current_piece = self.get_new_piece()
         self.next_piece = self.get_new_piece()
 
@@ -248,21 +266,23 @@ class Game:
             self.fall_time = 0
 
     def draw(self):
-        """Draw everything"""
+        """Draw everything with dynamic sizing"""
         self.screen.fill(BLACK)
         
-        # Calculate grid position
-        grid_x = 50
-        grid_y = 50
+        # Calculate centered grid position
+        grid_total_width = GRID_WIDTH * self.grid_size
+        grid_total_height = GRID_HEIGHT * self.grid_size
+        grid_x = (self.screen.get_width() - grid_total_width) // 2
+        grid_y = (self.screen.get_height() - grid_total_height) // 3
         
         # Draw grid
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
                 rect = pygame.Rect(
-                    grid_x + x * GRID_SIZE,
-                    grid_y + y * GRID_SIZE,
-                    GRID_SIZE,
-                    GRID_SIZE
+                    grid_x + x * self.grid_size,
+                    grid_y + y * self.grid_size,
+                    self.grid_size,
+                    self.grid_size
                 )
                 
                 if self.grid[y][x]:
@@ -278,55 +298,59 @@ class Game:
                 for x, cell in enumerate(row):
                     if cell:
                         rect = pygame.Rect(
-                            grid_x + (self.current_piece.x + x) * GRID_SIZE,
-                            grid_y + (self.current_piece.y + y) * GRID_SIZE,
-                            GRID_SIZE,
-                            GRID_SIZE
+                            grid_x + (self.current_piece.x + x) * self.grid_size,
+                            grid_y + (self.current_piece.y + y) * self.grid_size,
+                            self.grid_size,
+                            self.grid_size
                         )
                         pygame.draw.rect(self.screen, self.current_piece.color, rect)
                         pygame.draw.rect(self.screen, WHITE, rect, 2)
         
         # Draw UI
-        self.draw_ui()
-        
-        pygame.display.flip()
+        self.draw_ui(grid_x + grid_total_width + 20)
 
-    def draw_ui(self):
-        """Draw user interface"""
-        ui_x = 400
+    def draw_ui(self, ui_x):
+        """Draw user interface with dynamic positioning"""
+        ui_y = 50
         
         # Score
         score_text = self.fonts['medium'].render(f"Score: {self.score}", True, WHITE)
-        self.screen.blit(score_text, (ui_x, 50))
+        self.screen.blit(score_text, (ui_x, ui_y))
         
         # High Score
         high_score_text = self.fonts['small'].render(f"High: {self.high_score}", True, WHITE)
-        self.screen.blit(high_score_text, (ui_x, 90))
+        self.screen.blit(high_score_text, (ui_x, ui_y + 40))
         
         # Level
         level_text = self.fonts['small'].render(f"Level: {self.level}", True, WHITE)
-        self.screen.blit(level_text, (ui_x, 130))
+        self.screen.blit(level_text, (ui_x, ui_y + 80))
         
         # Lines
         lines_text = self.fonts['small'].render(f"Lines: {self.lines_cleared}", True, WHITE)
-        self.screen.blit(lines_text, (ui_x, 170))
+        self.screen.blit(lines_text, (ui_x, ui_y + 120))
+        
+        # Resize instructions
+        resize_text = self.fonts['small'].render("Resize window to adjust board size", True, WHITE)
+        self.screen.blit(resize_text, (20, self.screen.get_height() - 30))
         
         # Game Over
         if self.game_over:
             game_over_text = self.fonts['large'].render("GAME OVER", True, WHITE)
             restart_text = self.fonts['small'].render("Press R to restart", True, WHITE)
-            self.screen.blit(game_over_text, (50, 300))
-            self.screen.blit(restart_text, (50, 360))
+            text_x = (self.screen.get_width() - game_over_text.get_width()) // 2
+            self.screen.blit(game_over_text, (text_x, self.screen.get_height() // 3))
+            self.screen.blit(restart_text, (text_x, self.screen.get_height() // 3 + 60))
         
         # Pause Status
         if self.paused:
             pause_text = self.fonts['large'].render("PAUSED", True, WHITE)
-            self.screen.blit(pause_text, (50, 300))
             continue_text = self.fonts['small'].render("Press P to continue", True, WHITE)
-            self.screen.blit(continue_text, (50, 360))
+            text_x = (self.screen.get_width() - pause_text.get_width()) // 2
+            self.screen.blit(pause_text, (text_x, self.screen.get_height() // 3))
+            self.screen.blit(continue_text, (text_x, self.screen.get_height() // 3 + 60))
 
     def run(self):
-        """Main game loop"""
+        """Main game loop with resize handling"""
         clock = pygame.time.Clock()
         running = True
         
@@ -336,6 +360,8 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.VIDEORESIZE:
+                    self.handle_resize(event)
                 else:
                     self.handle_input(event)
             
